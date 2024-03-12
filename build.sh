@@ -184,7 +184,7 @@ install_additional_packages() {
     # Install libraries, and other APT utilities from the system
     lib_pkgs=( libpcap-dev libpq-dev libgbm-dev )
     utility_pkgs=( net-tools zip p7zip-full dnsutils mlocate chafa tmux duf )
-    system_pkgs=( network-manager screenfetch zsh ssh)
+    system_pkgs=( network-manager screenfetch zsh ssh )
     prog_pkgs=( python3-full python3-netifaces python3-pip pipx git gcc )
     other_pkgs=( firefox-esr )
     
