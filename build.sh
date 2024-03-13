@@ -12,15 +12,8 @@ ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 
 
-run_checks() {
+run_all_checks() {
     run_level=`ps aux | grep init | head -n1 | awk '{print $11}' | tr -d /`
-
-    # Systemd check
-    if [[ $run_level == "init" ]]
-    then
-        echo -e "[x] Must be running systemd to start"
-        exit 1
-    fi
 
     # run as root 
 
@@ -423,7 +416,7 @@ EOF
 }
 
 main() {
-    run_checks
+    run_all_checks
     install_requirements
     build_kali_repositories
     configure_wslconf
