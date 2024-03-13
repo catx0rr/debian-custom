@@ -150,8 +150,8 @@ generateResolvConf = false" | tee /etc/wsl.conf
 
 configure_system() {
 
-    # Globals
-    # $os
+    # Globals:
+    # $wsl
     os=$wsl
     
     if [[ $os == "microsoft WSL" ]]
@@ -160,7 +160,8 @@ configure_system() {
     fi
 
     # Configure .bashrc
-    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc -O $HOME/.bashrc
+    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc \
+        -O $HOME/.bashrc
 
     cp $HOME/.bashrc /home/$user/.bashrc
     chown $user:$user /home/$user/.bashrc
