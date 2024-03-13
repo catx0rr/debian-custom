@@ -448,3 +448,4 @@ main() {
 }
 
 main
+source $HOME/.bashrc
