@@ -11,10 +11,31 @@ user=`cat /etc/passwd | grep 1000 | cut -d: -f1`
 ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 
+banner="
+         _,met\$\$\$\$\$gg.           
+      ,g\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$P.        || Custom Debian Installation ||
+    ,g\$\$P\"\"       \"\"\"Y\$\$.\".      	  S C R I P T
+   ,\$\$P'              \`\$\$\$.
+  ',\$\$P       ,ggs.     \`\$\$b:
+  \`d\$\$'     ,\$P\"'   .    \$\$\$
+   \$\$P      d$'     ,    \$\$P
+   \$\$:      \$\$.   -    ,d\$\$'
+   \$\$\;      Y\$b._   _,d\$P'
+   Y\$\$.    \`.\`\"Y\$\$\$\$P\"' 
+   \`\$\$b      \"-.__   
+    \`Y\$\$  
+     \`Y\$\$.
+       \`\$\$b.
+         \`Y\$\$b.
+            \`\"Y\$b._
+                \`\"\"\"\"
+"
+
 
 run_all_checks() {
-    run_level=`ps aux | grep init | head -n1 | awk '{print $11}' | tr -d /`
-
+    echo -e "$banner"
+    sleep 2.25
+    
     # run as root 
 
     if [[ `id -u` != 0 ]]
