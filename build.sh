@@ -10,6 +10,9 @@ set -e
 user=`cat /etc/passwd | grep 1000 | cut -d: -f1`
 ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
+hostname="debian"
+os=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
+
 
 banner="
          _,met\$\$\$\$\$gg.           
@@ -124,27 +127,34 @@ deb http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmwa
 
 
 configure_wslconf() {
+    # Check if system is running WSL
+    # Globals:
+    # $os
+    os=`echo $os | awk '{print $2}'`
+
+    if [[ $os == "WSL" ]]
+    then
     # Configure defaults for wsl.conf
-    echo "[boot]
-systemd=true
-command=systemctl start ssh
-command=echo \"nameserver 1.1.1.1
-nameserver 9.9.9.9\" > /etc/resolv.conf
+        echo "[boot]
+systemd = true
 
 [interop]
-enabled=true
-appendWindowsPath=true
+enabled = true
+appendWindowsPath = true
 
 [network]
-generateResolvConf=false" | tee /etc/wsl.conf
+hostname = $hostname
+generateResolvConf = false" | tee /etc/wsl.conf
+    fi
 }
 
 configure_system() {
 
-    # Fix ping in wsl
-    os=`uname -a | grep -i wsl | awk -F- '{print $3,$5}' | cut -d' ' -f1,2`
-
-    if [[ $os == "microsoft WSL2" ]]
+    # Globals
+    # $os
+    os=$os
+    
+    if [[ $os == "microsoft WSL" ]]
     then
         setcap cap_net_raw+p /bin/ping
     fi
