@@ -73,7 +73,7 @@ if [ "$color_prompt" = yes ]; then
     # custom colors 
     custom_color='\033[1;92m'
     prompt_two='\033[0;36m'
-    end_prompt='\033[0;0m'
+    end_prompt='\033[0;0m\]'
     end_prompt_symbol="$"
     custom_prompt_symbol=$prompt_symbol
 
