@@ -11,7 +11,7 @@ user=`cat /etc/passwd | grep 1000 | cut -d: -f1`
 ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 hostname="debian"
-os=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
+wsl=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
 
 
 banner="
@@ -129,8 +129,8 @@ deb http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmwa
 configure_wslconf() {
     # Check if system is running WSL
     # Globals:
-    # $os
-    os=`echo $os | awk '{print $2}'`
+    # $wsl
+    os=`echo $wsl | awk '{print $2}'`
 
     if [[ $os == "WSL" ]]
     then
@@ -152,7 +152,7 @@ configure_system() {
 
     # Globals
     # $os
-    os=$os
+    os=$wsl
     
     if [[ $os == "microsoft WSL" ]]
     then
