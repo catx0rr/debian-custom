@@ -34,7 +34,7 @@ run_checks() {
 
 install_requirements() {
     # prerequisite packages
-    requirements=( wget curl vim gpg zsh )
+    requirements=( wget curl vim gpg )
 
     echo -e "[*] Updating system.."
 
@@ -125,6 +125,22 @@ appendWindowsPath=true
 generateResolvConf=false" | tee /etc/wsl.conf
 }
 
+configure_system() {
+
+    # Fix ping in wsl
+    os=`uname -a | grep -i wsl | awk -F- '{print $3,$5}' | cut -d' ' -f1,2`
+
+    if [[ $os == "microsoft WSL2" ]]
+    then
+        setcap cap_net_raw+p /bin/ping
+    fi
+
+    # Configure .bashrc
+    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc -O $HOME/.bashrc
+
+    cp $HOME/.bashrc /home/$user/.bashrc
+    chown $user:user /home/$user/.bashrc
+}
 
 configure_env() {
     # export PATH variables to profile 
@@ -164,22 +180,6 @@ configure_env() {
     # export env local user
     echo -e "\nexport PATH=\"\$PATH:$user_bin_path\"" \
         | tee -a /home/$user/.profile
-
-}
-
-configure_system() {
-
-    # Fix ping in wsl
-    os=`uname -a | grep -i wsl | awk -F- '{print $3,$5}' | cut -d' ' -f1,2`
-
-    if [[ $os == "microsoft WSL2" ]]
-    then
-        setcap cap_net_raw+p /bin/ping
-    fi
-
-    # Configure shell
-    usermod --shell /bin/zsh $user
-
 
 }
 
