@@ -244,7 +244,7 @@ install_additional_packages() {
     mv $HOME/.cargo /opt/cargo
     # clean cargo envs
     sed -i s'/.*\$HOME.*//g' $HOME/.profile
-    sed -i s'/.*\$HOME.*//g' $HOME/.profile
+    sed -i s'/.*\$HOME.*//g' /home/$user/.profile
 }
 
 install_pentest_tools() {
