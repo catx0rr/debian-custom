@@ -101,7 +101,7 @@ if [ "$color_prompt" = yes ]; then
 	    #https://bash-prompt-generator.org/
 	    #https://www.alt-codes.net/greater-than-symbols
 	    #https://www.codeproject.com/Articles/5329247/How-to-Change-Text-Color-in-a-Linux-Terminal
-	    PS1='('$custom_color'\u'$end_prompt'::'$custom_prompt_symbol'::'$custom_color'\h'$end_prompt'):['$prompt_two'\!'$end_prompt']:'$custom_color''$end_prompt_symbol' ⪧'$end_prompt' ';;
+	    PS1='${VIRTUAL_ENV:+('$prompt_two'$(basename $VIRTUAL_ENV)'$end_prompt')::}''('$custom_color'\u'$end_prompt'::'$custom_prompt_symbol'::'$custom_color'\h'$end_prompt'):['$prompt_two'\!'$end_prompt']:'$custom_color''$end_prompt_symbol' ⪧'$end_prompt' ';;
     esac
     unset prompt_color
     unset info_color
