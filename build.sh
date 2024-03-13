@@ -414,7 +414,7 @@ $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
 
     # Bloodhound Installation
     git clone https://github.com/SpecterOps/BloodHound.git /opt/bloodhound
-    cd /opt/bloodound/
+    cd /opt/bloodhound/
     cp examples/docker-compose/* ./
 
     # Create a symlink to execute bloodhound-ce
