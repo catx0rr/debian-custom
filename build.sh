@@ -189,11 +189,13 @@ configure_env() {
     # export env root user
     echo -e "\nexport PATH=\"\$PATH:$bin_path\"" \
         | tee -a /root/.bashrc
-    source $HOME/.profile
+    
 
     # export env local user
     echo -e "\nexport PATH=\"\$PATH:$user_bin_path\"" \
-        | tee -a /home/$user/.profile
+        | tee -a /home/$user/.bashrc
+
+    source $HOME/.bashrc
 
 }
 
