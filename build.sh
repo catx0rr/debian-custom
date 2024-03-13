@@ -34,7 +34,7 @@ run_checks() {
 
 install_requirements() {
     # prerequisite packages
-    requirements=( wget curl vim gpg )
+    requirements=( wget curl vim gpg zsh )
 
     echo -e "[*] Updating system.."
 
@@ -176,6 +176,9 @@ configure_system() {
     then
         setcap cap_net_raw+p /bin/ping
     fi
+
+    # Configure shell
+    usermod --shell /bin/zsh $user
 
 
 }
