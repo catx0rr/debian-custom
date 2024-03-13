@@ -34,7 +34,7 @@ run_checks() {
 
 install_requirements() {
     # prerequisite packages
-    requirements=( wget curl vim gpg )
+    requirements=( wget curl vim gpg debootstrap)
 
     echo -e "[*] Updating system.."
 
@@ -139,7 +139,7 @@ configure_system() {
     wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc -O $HOME/.bashrc
 
     cp $HOME/.bashrc /home/$user/.bashrc
-    chown $user:user /home/$user/.bashrc
+    chown $user:$user /home/$user/.bashrc
 }
 
 configure_env() {
