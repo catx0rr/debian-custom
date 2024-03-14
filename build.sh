@@ -11,7 +11,7 @@ user=`cat /etc/passwd | grep 1000 | cut -d: -f1`
 ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 hostname="debian"
-wsl=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
+os=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
 
 
 banner="
@@ -129,8 +129,8 @@ deb http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmwa
 configure_wslconf() {
     # Check if system is running WSL
     # Globals:
-    # $wsl
-    os=`echo $wsl | awk '{print $2}'`
+    # $os
+    os=`echo $os | awk '{print $2}'`
 
     if [[ $os == "WSL" ]]
     then
@@ -150,9 +150,9 @@ generateResolvConf = false" | tee /etc/wsl.conf
 
 configure_system() {
 
-    # Globals:
-    # $wsl
-    os=$wsl
+    # Globals
+    # $os
+    os=$os
     
     if [[ $os == "microsoft WSL" ]]
     then
@@ -160,8 +160,7 @@ configure_system() {
     fi
 
     # Configure .bashrc
-    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc \
-        -O $HOME/.bashrc
+    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc -O $HOME/.bashrc
 
     cp $HOME/.bashrc /home/$user/.bashrc
     chown $user:$user /home/$user/.bashrc
@@ -177,6 +176,7 @@ configure_env() {
     responder="/opt/responder"
     nuclei="/opt/nuclei"
     bloodhound="/opt/bloodhound"
+    ldaprelayscan="/opt/ldaprelayscan"
 
     tools_path=( $go 
                  $rust 
@@ -185,6 +185,7 @@ configure_env() {
                  $netexec 
                  $nuclei 
                  $bloodhound
+                 $ldaprelayscan
                )
 
     for path in ${tools_path[@]}
@@ -281,6 +282,9 @@ install_additional_packages() {
     sed -i s'/.*\$HOME.*//g' /home/$user/.bashrc
     sed -i s'/.*\$HOME.*//g' /root/.profile
     sed -i s'/.*\$HOME.*//g' /root/.bashrc
+
+    # Install pipx packages
+    pipx install virtualenv
 }
 
 install_pentest_tools() {
@@ -341,13 +345,10 @@ install_pentest_tools() {
     #########################
     # modern crackmapexec
     mkdir -p /opt/netexec
-
     # Install on user local
     su - $user -c "pipx install git+https://github.com/Pennyw0rth/NetExec"
-
     # Make /opt direct path
     cp -a $user_pipx_dir/* /opt/netexec
-
     # Clean up
     rm -rf $user_pipx_dir/*
 
@@ -359,9 +360,7 @@ install_pentest_tools() {
 
     # Install impacket on user local
     su - $user -c "/opt/go/bin/go install github.com/ropnop/kerbrute@latest"
-
     mv /home/$user/go /home/$user/.local/
-
     # Create a symlink to /opt/kerbrute
     ln -s /home/$user/.local/go/bin/kerbrute /opt/kerbrute/
 
@@ -371,11 +370,40 @@ install_pentest_tools() {
     responder_source_path="/home/$user/.local"
 
     mkdir -p /opt/responder
-
-    git clone https://github.com/camopants/igandx-Responder.git $responder_source_path/igandx-Responder
-
+    git clone https://github.com/camopants/igandx-Responder.git \
+        $responder_source_path/igandx-Responder
     # Create a symlink to /opt/responder
-    ln -s /home/$user/.local/igandx-Responder/Responder.py /opt/responder/responder
+    ln -s /home/$user/.local/igandx-Responder/Responder.py \
+        /opt/responder/responder
+
+    #########################
+    # ldaprelayscan
+    #########################
+    ldaprelayscan_path="/home/$user/.local/share/pipx/venvs/ldaprelayscan"
+
+    mkdir -p /opt/ldaprelayscan
+    git clone https://github.com/zyn3rgy/LdapRelayScan $ldaprelayscan_path
+    # build python virtual environment to use
+    virtualenv $ldaprelayscan_path/venv
+    mv $ldaprelayscan_path/venv/bin $ldaprelayscan_path
+    mv $ldaprelayscan_path/LdapRelayScan.py $ldaprelayscan_path/bin
+    chmod +x $ldaprelayscan_path/bin/LdapRelayScan.py
+    source $ldaprelayscan_path/bin/activate
+    # install requirements
+    for x in `cat $ldaprelayscan_path/requirements_exact.txt`
+    do 
+        pipx install $x
+    done
+    deactivate
+
+    # add python env to interpret and create a symlink to /opt/
+    sed -i '0,/^import.*/s/^import.*/\#\!\/usr\/bin\/env\ python3\n&/' \
+        $ldaprelayscan_path/bin/LdapRelayScan.py
+    ln -s $ldaprelayscan_path/bin/LdapRelayScan.py \
+        /opt/ldaprelayscan/ldaprelayscan
+
+    # clean envs
+    rm -rf $ldaprelayscan_path/venv $ldaprelayscan_path/docker
 
     #########################
     # Bloodhound and Ingestors
