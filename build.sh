@@ -176,7 +176,6 @@ configure_env() {
     responder="/opt/responder"
     nuclei="/opt/nuclei"
     bloodhound="/opt/bloodhound"
-    ldaprelayscan="/opt/ldaprelayscan"
 
     tools_path=( $go 
                  $rust 
@@ -185,7 +184,6 @@ configure_env() {
                  $netexec 
                  $nuclei 
                  $bloodhound
-                 $ldaprelayscan
                )
 
     for path in ${tools_path[@]}
