@@ -12,6 +12,7 @@ ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 hostname="debian"
 os=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
+# install legacy tools
 legacy_tools=1
 
 
