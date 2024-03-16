@@ -12,6 +12,7 @@ ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 hostname="debian"
 os=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
+legacy_tools=1
 
 
 banner="
@@ -167,6 +168,10 @@ configure_system() {
 }
 
 configure_env() {
+    # Configure other aliases and such
+    echo -e "\nalias tmux='tmux -u'" | tee -a /root/.bashrc
+    echo -e "\nalias tmux='tmux -u'" | tee -a /home/$user/.bashrc
+
     # export PATH variables to profile 
     go="/opt/go/bin"
     rust="/opt/cargo/bin"
@@ -176,6 +181,9 @@ configure_env() {
     responder="/opt/responder"
     nuclei="/opt/nuclei"
     bloodhound="/opt/bloodhound"
+    bloodhound_legacy="/opt/bloodhound-legacy"
+    plumhound="/opt/plumhound"
+    ldaprelayscan="/opt/ldaprelayscan"
 
     tools_path=( $go 
                  $rust 
@@ -184,6 +192,9 @@ configure_env() {
                  $netexec 
                  $nuclei 
                  $bloodhound
+                 $bloodhound_legacy
+                 $plumhound
+                 $ldaprelayscan
                )
 
     for path in ${tools_path[@]}
@@ -199,14 +210,16 @@ configure_env() {
     # export env root user
     echo -e "\nexport PATH=\"\$PATH:$bin_path\"" \
         | tee -a /root/.bashrc
+    echo -e "\nexport PATH=\"\$PATH:$bin_path\"" \
+        | tee -a /root/.profile
     
-
     # export env local user
     echo -e "\nexport PATH=\"\$PATH:$user_bin_path\"" \
         | tee -a /home/$user/.bashrc
+    echo -e "\nexport PATH=\"\$PATH:$user_bin_path\"" \
+        | tee -a /home/$user/.profile
 
     source $HOME/.bashrc
-
 }
 
 install_additional_packages() {
@@ -215,7 +228,7 @@ install_additional_packages() {
     utility_pkgs=( net-tools zip p7zip-full dnsutils mlocate chafa tmux duf bsdutils )
     system_pkgs=( network-manager screenfetch zsh ssh )
     prog_pkgs=( python3-full python3-netifaces python3-pip pipx git gcc )
-    other_pkgs=( firefox-esr )
+    other_pkgs=( firefox-esr chromium )
     
     for pkg in ${lib_pkgs[@]}
     do 
@@ -477,6 +490,58 @@ EOF
 
 }
 
+install_legacy_tools() {
+    #########################
+    # Plumhound
+    #########################
+    # Bloodhound reporting tool
+    # This only works for old bloodhound.py
+    plumhound_path="/home/$user/.local/share/pipx/venvs/plumhound"
+
+    # installing plumhound from the repository
+    mkdir -p /opt/plumhound
+    git clone https://github.com/PlumHound/PlumHound $plumhound_path
+    pip3 install -r requirements.txt
+
+    chmod +x $plumhound_path/PlumHound.py
+
+    # fix the env terminal interpreter on the file
+    sed -i '0,/python/s//python3/' $plumhound_path/PlumHound.py
+    # creating symlinks to the executable file
+    ln -s $plumhound_path/PlumHound.py \
+        /opt/plumhound/plumhound
+
+    #########################
+    # Bloodhound
+    #########################
+    # Legacy bloodhound predecessor of bloodhound-ce
+    bloodhound_legacy_path=/opt/bloodhound-legacy
+    
+    # Download latest package and unpack contents
+    mkdir /opt/bloodhound-legacy
+    curl -s https://api.github.com/repos/BloodHoundAD/BloodHound/releases \
+        | grep "browser_download_url.*/download/.*.*.*/*-linux-x64*.zip" \
+        | head -n1 \
+        | cut -d: -f2,3 \
+		| tr -d '"' \
+        | wget -i - -P $bloodhound_legacy_path
+
+    cd $bloodhound_legacy_path
+    unzip BloodHound-linux-x64.zip
+
+    # Cleanup path
+    mv BloodHound-linux-x64/* .
+    mv BloodHound bloodhound-legacy
+    rm -rf BloodHound-linux-x64 BloodHound-linux-x64.zip
+
+    # download neo4j
+    apt-get install -yq neo4j \
+        -o Dpkg::Progress-Fancy="0" \
+        -o APT::Color="0" \
+        -o Dpkg::Use-Pty="0" 2> /dev/null \
+        | tee -a $err_log
+}
+
 main() {
     run_all_checks
     install_requirements
@@ -486,6 +551,12 @@ main() {
     configure_system
     install_additional_packages
     install_pentest_tools
+
+    # Optional install
+    if [ $legacy_tools -eq 1 ]
+    then
+        install_legacy_tools
+    fi
 }
 
 main
