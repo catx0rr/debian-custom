@@ -161,7 +161,8 @@ configure_system() {
     fi
 
     # Configure .bashrc
-    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc -O $HOME/.bashrc
+    wget https://raw.githubusercontent.com/catx0rr/debian-custom/master/configs/bashrc \
+        -O $HOME/.bashrc
 
     cp $HOME/.bashrc /home/$user/.bashrc
     chown $user:$user /home/$user/.bashrc
@@ -183,7 +184,10 @@ configure_env() {
     bloodhound="/opt/bloodhound"
     bloodhound_legacy="/opt/bloodhound-legacy"
     plumhound="/opt/plumhound"
+    rusthound="/opt/rusthound"
+    crackmapexec="/opt/crackmapexec"
     ldaprelayscan="/opt/ldaprelayscan"
+    projectdiscovery="/opt/projectdiscovery"
 
     tools_path=( $go 
                  $rust 
@@ -194,7 +198,10 @@ configure_env() {
                  $bloodhound
                  $bloodhound_legacy
                  $plumhound
+                 $rusthound
+                 $crackmapexec
                  $ldaprelayscan
+                 $projectdiscovery
                )
 
     for path in ${tools_path[@]}
@@ -224,10 +231,36 @@ configure_env() {
 
 install_additional_packages() {
     # Install libraries, and other APT utilities from the system
-    lib_pkgs=( libpcap-dev libpq-dev libgbm-dev )
-    utility_pkgs=( net-tools zip p7zip-full dnsutils mlocate chafa tmux duf bsdutils )
+    lib_pkgs=( libpcap-dev
+               libpq-dev
+               libgbm-dev
+               libclang-dev
+               libgssapi-krb5-2
+               libkrb5-dev
+               libsasl2-modules-gssapi-mit
+             )
+
+    utility_pkgs=( net-tools 
+                   zip p7zip-full
+                   dnsutils
+                   mlocate
+                   chafa
+                   tmux
+                   duf
+                   bsdutils
+                   musl-tools 
+                 )
+
+    prog_pkgs=( python3-full
+                python3-netifaces
+                python3-pip pipx 
+                git 
+                gcc 
+                clang 
+                gcc-mingw-w64-x86-64
+              )
+
     system_pkgs=( network-manager screenfetch zsh ssh )
-    prog_pkgs=( python3-full python3-netifaces python3-pip pipx git gcc )
     other_pkgs=( firefox-esr chromium )
     
     for pkg in ${lib_pkgs[@]}
@@ -488,6 +521,98 @@ cd /opt/bloodhound
 docker-compose down
 EOF
 
+    #########################
+    # RustHound
+    #########################
+    # yet another bloodhound ingestor tool built in rust
+    rusthound_path="/opt/rusthound"
+
+    git clone https://github.com/NH-RED-TEAM/RustHound $rusthound_path
+    cd $rusthound_path
+    cargo build --release
+    mv $rusthound_path/target/release/rusthound .
+
+    #########################
+    # nuclei tools
+    #########################
+    # network va scanner
+    project_discovery_path="/opt/projectdiscovery"
+
+    mkdir -p $project_discovery_path
+
+    # install latest aquatone
+    curl https://api.github.com/repos/michenriksen/aquatone/releases \
+		| grep "browser_download_url.*_linux_amd64_*.*.*zip" \
+		| head -n1 \
+		| cut -d: -f2,3 \
+		| tr -d '"' \
+		| wget -qi - -P $project_discovery_path
+    # cleanup
+    unzip $project_discovery_path/aquatone_linux_amd64_*.*.*.zip \
+        -d $project_discovery_path
+    rm -rf $project_discovery_path/aquatone_linux_amd64_*.*.*.zip \
+        $project_discovery_path/*.txt \
+        $project_discovery_path/*.md
+
+    # install latest nuclei
+    curl https://api.github.com/repos/projectdiscovery/nuclei/releases \
+		| grep "browser_download_url.*_linux_amd64.zip" \
+		| head -n1 \
+		| cut -d: -f2,3 \
+		| tr -d '"' \
+		| wget -qi - -P $project_discovery_path
+    # cleanup
+    unzip $project_discovery_path/nuclei_*.*.*_linux_amd64.zip \
+        -d $project_discovery_path
+        rm -rf $project_discovery_path/nuclei_*.*.*_linux_amd64.zip \
+        $project_discovery_path/*.txt \
+        $project_discovery_path/*.md
+
+    # install latest httpx
+    curl https://api.github.com/repos/projectdiscovery/httpx/releases \
+		| grep "browser_download_url.*_linux_amd64.zip" \
+		| head -n1 \
+		| cut -d: -f2,3 \
+		| sed 's/"//g' \
+		| wget -qi - -P $project_discovery_path
+    # cleanup
+    unzip $project_discovery_path/httpx_*.*.*_linux_amd64.zip \
+        -d $project_discovery_path
+    rm -rf $project_discovery_path/httpx_*.*.*_linux_amd64.zip \
+        $project_discovery_path/*.txt \
+        $project_discovery_path/*.md
+    # remove python3-httpx conflicting package
+    apt-get remove -yq python3-httpx --purge \
+        -o Dpkg::Progress-Fancy="0" \
+        -o APT::Color="0" \
+        -o Dpkg::Use-Pty="0" 2> /dev/null \
+        | tee -a $err_log
+
+    # install latest katana
+    curl https://api.github.com/repos/projectdiscovery/katana/releases \
+		| grep "browser_download_url.*_linux_amd64.zip" \
+		| head -n1 \
+		| cut -d: -f2,3 \
+		| sed 's/"//g' \
+		| wget -qi - -P $project_discovery_path
+    # cleanup
+    unzip $project_discovery_path/katana_*.*.*_linux_amd64.zip \
+        -d $project_discovery_path
+    rm -rf $project_discovery_path/katana_*.*.*_linux_amd64.zip \
+        $project_discovery_path/*.txt \
+        $project_discovery_path/*.md
+
+    # install latest nuclei templates
+    git clone https://github.com/projectdiscovery/nuclei-templates \
+        $project_discovery_path/nuclei-templates
+
+    # compile all .yaml files to "all" directory
+    mkdir -p $project_discovery_path/nuclei-templates/all \
+        2>/dev/null
+    find $project_discovery_path/nuclei-templates \
+        -type f -name *.yaml \
+        | xargs -I % cp -rfv % $project_discovery_path/nuclei-templates/all \
+        2>/dev/null
 }
 
 install_legacy_tools() {
@@ -495,7 +620,7 @@ install_legacy_tools() {
     # Plumhound
     #########################
     # Bloodhound reporting tool
-    # This only works for old bloodhound.py
+    # This only works for old bloodhound
     plumhound_path="/home/$user/.local/share/pipx/venvs/plumhound"
 
     # installing plumhound from the repository
@@ -514,7 +639,7 @@ install_legacy_tools() {
     #########################
     # Bloodhound
     #########################
-    # Legacy bloodhound predecessor of bloodhound-ce
+    # predecessor of bloodhound-ce
     bloodhound_legacy_path=/opt/bloodhound-legacy
     
     # Download latest package and unpack contents
@@ -540,6 +665,28 @@ install_legacy_tools() {
         -o APT::Color="0" \
         -o Dpkg::Use-Pty="0" 2> /dev/null \
         | tee -a $err_log
+
+    #########################
+    # crackmapexec
+    #########################
+    # predecessor of netexec
+    crackmapexec_path="/opt/crackmapexec"
+
+    # install and build crackmapexec
+    git clone --recursive \
+        https://github.com/byt3bl33d3r/CrackMapExec $crackmapexec_path
+    # old crackmapexec is being handled by poetry
+    pipx install poetry
+    cd $crackmapexec_path
+    poetry install
+    poetry run crackmapexec
+    # create path to executable
+    cat >> $crackmapexec_path/crackmapexec << EOF
+#!/bin/bash
+
+poetry run crackmapexec "$@"
+EOF
+
 }
 
 main() {
