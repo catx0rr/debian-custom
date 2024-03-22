@@ -8,11 +8,17 @@ set -e
 # Globals
 # Change settings here to apply configuration to the system 
 user=`cat /etc/passwd | grep 1000 | cut -d: -f1`
-ipv4_address="0.0.0.0"
 err_log="/tmp/install.log"
 hostname="debian"
+# checks if host is a wsl instance
 os=`uname -a | grep -i wsl | awk -F- '{print $2,$4}' | cut -d' ' -f1,2 | sed s'/.$//'`
-# install legacy tools
+
+# install tools per functionality
+repo_tools=1
+ad_network_tools=1
+web_tools=1
+all_rounder_tools=1
+# install old but still usable tools
 legacy_tools=1
 
 
@@ -189,6 +195,8 @@ configure_env() {
     crackmapexec="/opt/crackmapexec"
     ldaprelayscan="/opt/ldaprelayscan"
     projectdiscovery="/opt/projectdiscovery"
+    assetfinder="/opt/assetfinder"
+    gowitness="/opt/gowitness"
 
     tools_path=( $go 
                  $rust 
@@ -203,6 +211,7 @@ configure_env() {
                  $crackmapexec
                  $ldaprelayscan
                  $projectdiscovery
+                 $assetfinder
                )
 
     for path in ${tools_path[@]}
@@ -332,7 +341,7 @@ install_additional_packages() {
     pipx install virtualenv
 }
 
-install_pentest_tools() {
+install_repo_tools() {
     #########################
     # APT PT tools
     #########################
@@ -348,10 +357,17 @@ install_pentest_tools() {
             -o Dpkg::Use-Pty="0" 2> /dev/null \
             | tee -a $err_log
     done
+}
+
+install_ad_network_tools() {
+    ############################################
+    # INTERNAL PT TOOLS
+    ###########################################
 
     #########################
     # IMPACKET
     #########################
+    # AD and network penetration tool
     impacket_source_path="/home/$user/.local/share/pipx/venvs/impacket/lib/python3.11/site-packages"
 
     mkdir -p /opt/impacket
@@ -388,7 +404,7 @@ install_pentest_tools() {
     #########################
     # NETEXEC
     #########################
-    # modern crackmapexec
+    # modern crackmapexec network swiss knife
     mkdir -p /opt/netexec
     # Install on user local
     su - $user -c "pipx install git+https://github.com/Pennyw0rth/NetExec"
@@ -400,18 +416,19 @@ install_pentest_tools() {
     #########################
     # KERBRUTE
     #########################
-    # Install on user local
+    # bruteforcer, enumeration tool to kerberos
     mkdir -p /opt/kerbrute
 
-    # Install impacket on user local
+    # Install kerbrute on user local
     su - $user -c "/opt/go/bin/go install github.com/ropnop/kerbrute@latest"
-    mv /home/$user/go /home/$user/.local/
+    mv /home/$user/go/bin/kerbrute /home/$user/.local/go/bin/
     # Create a symlink to /opt/kerbrute
     ln -s /home/$user/.local/go/bin/kerbrute /opt/kerbrute/
 
     #########################
     # igandx-Responder
     #########################
+    # NBT-NS LLMNR and mDNS response tool
     responder_source_path="/home/$user/.local"
 
     mkdir -p /opt/responder
@@ -424,6 +441,7 @@ install_pentest_tools() {
     #########################
     # ldaprelayscan
     #########################
+    # ldaprelay tool
     ldaprelayscan_path="/home/$user/.local/share/pipx/venvs/ldaprelayscan"
 
     mkdir -p /opt/ldaprelayscan
@@ -453,6 +471,7 @@ install_pentest_tools() {
     #########################
     # Bloodhound and Ingestors
     #########################
+    # Official AD analysis tool for red teamers and alike
 
     # Docker Installation
     # check clean
@@ -525,23 +544,61 @@ EOF
     #########################
     # RustHound
     #########################
-    # yet another bloodhound ingestor tool built in rust
+    # yet another bloodhound ingestor tool built in rust (like bloodhound-python)
     rusthound_path="/opt/rusthound"
 
     git clone https://github.com/NH-RED-TEAM/RustHound $rusthound_path
     cd $rusthound_path
     cargo build --release
     mv $rusthound_path/target/release/rusthound .
+}
+
+install_web_tools() {
+    ############################################
+    # OSINT / External 
+    ###########################################
+
+    #########################
+    # Assetfinder
+    #########################
+    # find domains and subdomains potentially related to a given domain
+    mkdir -p "/opt/assetfinder"
+
+    # Install assetfinder on user local
+    su - $user -c "/opt/go/bin/go install github.com/tomnomnom/assetfinder@latest"
+    mv /home/$user/go/bin/assetfinder /home/$user/.local/go/bin/
+    # Create a symlink to /opt/assetfinder
+    ln -s /home/$user/.local/go/bin/assetfinder /opt/assetfinder/
+
+    #########################
+    # Go Witness
+    #########################
+    # Another aquatone web screenshot tool written in go
+    mkdir -p "/opt/gowitness"
+
+    # Install gowitness on user local
+    su - $user -c "/opt/go/bin/go install github.com/sensepost/gowitness@latest"
+    mv /home/$user/go/bin/gowitness /home/$user/.local/go/bin/
+    # Create symlink to /opt/gowitness
+    ln -s /home/$user/.local/go/bin/gowitness /opt/gowitness/
+
+}
+
+install_all_rounder_tools() {
+    ############################################
+    # ALL-ROUNDER TOOLS
+    ###########################################
 
     #########################
     # nuclei tools
     #########################
-    # network va scanner
+    # set of automated VA and discovery tool for networks and web alike
     project_discovery_path="/opt/projectdiscovery"
 
     mkdir -p $project_discovery_path
 
     # install latest aquatone
+    # web screenshot tool via chrome
     curl https://api.github.com/repos/michenriksen/aquatone/releases \
 		| grep "browser_download_url.*_linux_amd64_*.*.*zip" \
 		| head -n1 \
@@ -556,6 +613,7 @@ EOF
         $project_discovery_path/*.md
 
     # install latest nuclei
+    # network and web va templated scanner
     curl https://api.github.com/repos/projectdiscovery/nuclei/releases \
 		| grep "browser_download_url.*_linux_amd64.zip" \
 		| head -n1 \
@@ -570,6 +628,7 @@ EOF
         $project_discovery_path/*.md
 
     # install latest httpx
+    # a tool like httprobe to find alive hosts / domains
     curl https://api.github.com/repos/projectdiscovery/httpx/releases \
 		| grep "browser_download_url.*_linux_amd64.zip" \
 		| head -n1 \
@@ -590,6 +649,7 @@ EOF
         | tee -a $err_log
 
     # install latest katana
+    # URL web crawler tool built in go
     curl https://api.github.com/repos/projectdiscovery/katana/releases \
 		| grep "browser_download_url.*_linux_amd64.zip" \
 		| head -n1 \
@@ -604,6 +664,7 @@ EOF
         $project_discovery_path/*.md
 
     # install latest nuclei templates
+    # templates for nuclei scanner
     git clone https://github.com/projectdiscovery/nuclei-templates \
         $project_discovery_path/nuclei-templates
 
@@ -621,7 +682,7 @@ install_legacy_tools() {
     # Plumhound
     #########################
     # Bloodhound reporting tool
-    # This only works for old bloodhound
+    # This only works for old bloodhound (legacy)
     plumhound_path="/home/$user/.local/share/pipx/venvs/plumhound"
 
     # installing plumhound from the repository
@@ -670,7 +731,7 @@ install_legacy_tools() {
     #########################
     # crackmapexec
     #########################
-    # predecessor of netexec
+    # predecessor of netexec, network swiss knife
     crackmapexec_path="/opt/crackmapexec"
 
     # install and build crackmapexec
@@ -698,8 +759,25 @@ main() {
     configure_env
     configure_system
     install_additional_packages
-    install_pentest_tools
 
+    # PT tools as per configuration
+    if [ $repo_tools -eq 1 ]
+    then
+        install_repo_tools
+    fi
+    if [ $ad_network_tools -eq 1 ]
+    then
+        install_ad_network_tools
+    fi
+    if [ $web_tools -eq 1 ]
+    then
+        install_web_tools
+    fi
+    if [ $all_rounder_tools -eq 1 ]
+    then
+        install_all_rounder_tools
+    fi
+    
     # Optional install
     if [ $legacy_tools -eq 1 ]
     then
